@@ -46,6 +46,7 @@ func updateApiConfigurationPartial(ctx context.Context, manager *task.Manager, r
 // ProviderFields defines all the field names associated with a specific provider
 type ProviderFields struct {
 	APIKeyField            string // API key field name (e.g., "apiKey", "openAiApiKey")
+	ClientKeyField         string // Client key field name (optional, e.g., "gaussClientKey")
 	BaseURLField           string // Base URL field name (optional, empty if not applicable)
 	PlanModeModelIDField   string // Plan mode model ID field (e.g., "planModeApiModelId")
 	ActModeModelIDField    string // Act mode model ID field (e.g., "actModeApiModelId")
@@ -174,6 +175,19 @@ func GetProviderFields(provider cline.ApiProvider) (ProviderFields, error) {
 			ActModeProviderSpecificModelIDField:  "actModeNousResearchModelId",
 		}, nil
 
+	case cline.ApiProvider_GAUSS:
+		return ProviderFields{
+			APIKeyField:                          "gaussApiKey",
+			ClientKeyField:                       "gaussClientKey",
+			BaseURLField:                         "gaussBaseUrl",
+			PlanModeModelIDField:                 "planModeApiModelId",
+			ActModeModelIDField:                  "actModeApiModelId",
+			PlanModeProviderSpecificModelIDField: "planModeGaussModelId",
+			ActModeProviderSpecificModelIDField:  "actModeGaussModelId",
+			PlanModeModelInfoField:               "planModeGaussModelInfo",
+			ActModeModelInfoField:                "actModeGaussModelInfo",
+		}, nil
+
 	default:
 		return ProviderFields{}, fmt.Errorf("unsupported provider: %v", provider)
 	}
@@ -291,6 +305,16 @@ func setAPIKeyField(apiConfig *cline.ModelsApiConfiguration, fieldName string, v
 		apiConfig.HicapApiKey = value
 	case "nousResearchApiKey":
 		apiConfig.NousResearchApiKey = value
+	case "gaussApiKey":
+		apiConfig.GaussApiKey = value
+	}
+}
+
+// setClientKeyField sets the appropriate client key field in the config based on the field name
+func setClientKeyField(apiConfig *cline.ModelsApiConfiguration, fieldName string, value *string) {
+	switch fieldName {
+	case "gaussClientKey":
+		apiConfig.GaussClientKey = value
 	}
 }
 
@@ -318,6 +342,9 @@ func setProviderSpecificModelID(apiConfig *cline.ModelsApiConfiguration, fieldNa
 	case "planModeNousResearchModelId":
 		apiConfig.PlanModeNousResearchModelId = value
 		apiConfig.ActModeNousResearchModelId = value
+	case "planModeGaussModelId":
+		apiConfig.PlanModeGaussModelId = value
+		apiConfig.ActModeGaussModelId = value
 	}
 }
 
@@ -364,6 +391,62 @@ func AddProviderPartial(ctx context.Context, manager *task.Manager, provider cli
 	// Build field mask including all fields we're setting (without provider enums)
 	includeModelInfo := fields.PlanModeModelInfoField != "" && modelInfo != nil
 	fieldPaths := buildProviderFieldMask(fields, true, true, includeModelInfo, includeBaseURL, false)
+
+	// Create field mask
+	fieldMask := &fieldmaskpb.FieldMask{Paths: fieldPaths}
+
+	// Apply the partial update
+	request := &cline.UpdateApiConfigurationPartialRequest{
+		ApiConfiguration: apiConfig,
+		UpdateMask:       fieldMask,
+	}
+
+	if err := updateApiConfigurationPartial(ctx, manager, request); err != nil {
+		return fmt.Errorf("failed to update API configuration: %w", err)
+	}
+
+	return nil
+}
+
+// AddGaussProviderPartial configures Gauss provider with API key, client key, model ID, and optional base URL.
+func AddGaussProviderPartial(ctx context.Context, manager *task.Manager, modelID string, apiKey string, clientKey string, baseURL string) error {
+	// Get field mapping for Gauss provider
+	fields, err := GetProviderFields(cline.ApiProvider_GAUSS)
+	if err != nil {
+		return err
+	}
+
+	// Build a ModelsApiConfiguration with only the relevant provider fields set
+	apiConfig := &cline.ModelsApiConfiguration{}
+
+	// Set API key field
+	setAPIKeyField(apiConfig, fields.APIKeyField, proto.String(apiKey))
+
+	// Set Client key field
+	setClientKeyField(apiConfig, fields.ClientKeyField, proto.String(clientKey))
+
+	// Set base URL field if provided
+	includeBaseURL := false
+	if baseURL != "" && fields.BaseURLField != "" {
+		setBaseURLField(apiConfig, fields.BaseURLField, proto.String(baseURL))
+		includeBaseURL = true
+	}
+
+	// Set model ID fields
+	apiConfig.PlanModeApiModelId = proto.String(modelID)
+	apiConfig.ActModeApiModelId = proto.String(modelID)
+
+	// Set provider-specific model ID fields
+	if fields.PlanModeProviderSpecificModelIDField != "" {
+		setProviderSpecificModelID(apiConfig, fields.PlanModeProviderSpecificModelIDField, proto.String(modelID))
+	}
+
+	// Build field mask including all fields we're setting (without provider enums)
+	fieldPaths := buildProviderFieldMask(fields, true, true, false, includeBaseURL, false)
+	// Add client key field to the mask
+	if fields.ClientKeyField != "" {
+		fieldPaths = append(fieldPaths, fields.ClientKeyField)
+	}
 
 	// Create field mask
 	fieldMask := &fieldmaskpb.FieldMask{Paths: fieldPaths}
@@ -504,6 +587,8 @@ func setBaseURLField(apiConfig *cline.ModelsApiConfiguration, fieldName string, 
 		apiConfig.LmStudioBaseUrl = value
 	case "oca":
 		apiConfig.OcaBaseUrl = value
+	case "gaussBaseUrl":
+		apiConfig.GaussBaseUrl = value
 	}
 }
 

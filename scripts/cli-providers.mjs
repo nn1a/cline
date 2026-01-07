@@ -96,6 +96,7 @@ const ENABLED_PROVIDERS = [
 	"cerebras", // Cerebras models
 	"oca", // Oracle Code Assist
 	"nousResearch", // NousResearch provider
+	"gauss", // Gauss AI provider
 ]
 
 /**

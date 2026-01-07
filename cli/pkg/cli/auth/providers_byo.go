@@ -28,6 +28,7 @@ func GetBYOProviderList() []BYOProviderOption {
 		{Name: "Cerebras", Provider: cline.ApiProvider_CEREBRAS},
 		{Name: "NousResearch", Provider: cline.ApiProvider_NOUSRESEARCH},
 		{Name: "Oracle Code Assist", Provider: cline.ApiProvider_OCA},
+		{Name: "Gauss", Provider: cline.ApiProvider_GAUSS},
 	}
 }
 
@@ -105,6 +106,8 @@ func GetBYOProviderPlaceholder(provider cline.ApiProvider) string {
 		return "e.g., Hermes-4-405B"
 	case cline.ApiProvider_OCA:
 		return "e.g., oca/llama4"
+	case cline.ApiProvider_GAUSS:
+		return "e.g., gauss-1"
 	default:
 		return "Enter model ID"
 	}
@@ -132,6 +135,13 @@ func GetBYOAPIKeyFieldConfig(provider cline.ApiProvider) APIKeyFieldConfig {
 		EchoMode:   huh.EchoModePassword,
 		IsRequired: true,
 	}
+}
+
+// GaussCredentials holds the credentials for Gauss provider
+type GaussCredentials struct {
+	APIKey    string
+	ClientKey string
+	BaseURL   string
 }
 
 // PromptForAPIKey prompts the user to enter an API key (or base URL for Ollama).
@@ -166,7 +176,7 @@ func PromptForAPIKey(provider cline.ApiProvider) (string, string, error) {
 		baseURLForm := huh.NewForm(
 			huh.NewGroup(
 				huh.NewInput().
-					Title("Base URL (optional, for OpenAI-compatible providers)").
+					Title("Base URL (optional)").
 					Placeholder("e.g., https://api.example.com/v1").
 					Value(&baseURL).
 					Description("Press Enter to skip if using standard OpenAI API"),
@@ -181,4 +191,66 @@ func PromptForAPIKey(provider cline.ApiProvider) (string, string, error) {
 	}
 
 	return apiKey, "", nil
+}
+
+// PromptForGaussCredentials prompts the user to enter Gauss API key, client key, and optional base URL.
+func PromptForGaussCredentials() (GaussCredentials, error) {
+	var creds GaussCredentials
+
+	// Prompt for API Key
+	apiKeyForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("API Key").
+				EchoMode(huh.EchoModePassword).
+				Value(&creds.APIKey).
+				Validate(func(s string) error {
+					if s == "" {
+						return fmt.Errorf("API key cannot be empty")
+					}
+					return nil
+				}),
+		),
+	)
+
+	if err := apiKeyForm.Run(); err != nil {
+		return creds, fmt.Errorf("failed to get API key: %w", err)
+	}
+
+	// Prompt for Client Key
+	clientKeyForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Client Key").
+				EchoMode(huh.EchoModePassword).
+				Value(&creds.ClientKey).
+				Validate(func(s string) error {
+					if s == "" {
+						return fmt.Errorf("Client key cannot be empty")
+					}
+					return nil
+				}),
+		),
+	)
+
+	if err := clientKeyForm.Run(); err != nil {
+		return creds, fmt.Errorf("failed to get client key: %w", err)
+	}
+
+	// Prompt for Base URL (optional)
+	baseURLForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Base URL (optional)").
+				Placeholder("e.g., https://api.gauss.ai/v1").
+				Value(&creds.BaseURL).
+				Description("Press Enter to use default Gauss API endpoint"),
+		),
+	)
+
+	if err := baseURLForm.Run(); err != nil {
+		return creds, fmt.Errorf("failed to get base URL: %w", err)
+	}
+
+	return creds, nil
 }

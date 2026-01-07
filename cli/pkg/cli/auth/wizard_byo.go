@@ -113,6 +113,11 @@ func (pw *ProviderWizard) handleAddProvider() error {
 		return pw.handleAddOcaProvider()
 	}
 
+	// Step 2c: Special handling for Gauss provider (requires API key + client key)
+	if provider == cline.ApiProvider_GAUSS {
+		return pw.handleAddGaussProvider()
+	}
+
 	// Step 3: Get API key first (for non-Bedrock providers)
 	apiKey, baseURL, err := PromptForAPIKey(provider)
 	if err != nil {
@@ -165,6 +170,33 @@ func (pw *ProviderWizard) handleAddBedrockProvider() error {
 	}
 
 	fmt.Println("✓ Bedrock provider configured successfully!")
+	return nil
+}
+
+// handleAddGaussProvider handles adding Gauss provider with API key and client key
+func (pw *ProviderWizard) handleAddGaussProvider() error {
+	// Step 1: Get Gauss credentials (API key, client key, optional base URL)
+	creds, err := PromptForGaussCredentials()
+	if err != nil {
+		return fmt.Errorf("failed to get Gauss credentials: %w", err)
+	}
+
+	// Step 2: Get model ID (manual entry since Gauss doesn't support model fetching)
+	modelID, _, err := pw.manualModelEntry(cline.ApiProvider_GAUSS)
+	if err != nil {
+		return fmt.Errorf("model selection failed: %w", err)
+	}
+
+	// Step 3: Apply configuration using AddGaussProviderPartial
+	if err := AddGaussProviderPartial(pw.ctx, pw.manager, modelID, creds.APIKey, creds.ClientKey, creds.BaseURL); err != nil {
+		return fmt.Errorf("failed to save configuration: %w", err)
+	}
+
+	if err := setWelcomeViewCompleted(pw.ctx, pw.manager); err != nil {
+		verboseLog("Warning: Failed to mark welcome view as completed: %v", err)
+	}
+
+	fmt.Println("✓ Gauss provider configured successfully!")
 	return nil
 }
 

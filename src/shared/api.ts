@@ -42,6 +42,7 @@ export type ApiProvider =
 	| "minimax"
 	| "hicap"
 	| "nousResearch"
+	| "gauss"
 
 export interface ApiHandlerSecrets {
 	apiKey?: string // anthropic
@@ -86,6 +87,8 @@ export interface ApiHandlerSecrets {
 	minimaxApiKey?: string
 	hicapApiKey?: string
 	nousResearchApiKey?: string
+	gaussApiKey?: string
+	gaussClientKey?: string
 }
 
 export interface ApiHandlerOptions {
@@ -138,6 +141,7 @@ export interface ApiHandlerOptions {
 	ocaMode?: string
 	aihubmixBaseUrl?: string
 	aihubmixAppCode?: string
+	gaussBaseUrl?: string
 
 	// Plan mode configurations
 	planModeApiModelId?: string
@@ -178,7 +182,8 @@ export interface ApiHandlerOptions {
 	planModeHicapModelId?: string
 	planModeHicapModelInfo?: ModelInfo
 	planModeNousResearchModelId?: string
-	// Act mode configurations
+	planModeGaussModelId?: string
+	planModeGaussModelInfo?: OpenAiCompatibleModelInfo
 
 	// Act mode configurations
 	actModeApiModelId?: string
@@ -219,6 +224,8 @@ export interface ApiHandlerOptions {
 	actModeHicapModelId?: string
 	actModeHicapModelInfo?: ModelInfo
 	actModeNousResearchModelId?: string
+	actModeGaussModelId?: string
+	actModeGaussModelInfo?: OpenAiCompatibleModelInfo
 }
 
 export type ApiConfiguration = ApiHandlerOptions &

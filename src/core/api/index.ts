@@ -14,6 +14,7 @@ import { DeepSeekHandler } from "./providers/deepseek"
 import { DifyHandler } from "./providers/dify"
 import { DoubaoHandler } from "./providers/doubao"
 import { FireworksHandler } from "./providers/fireworks"
+import { GaussHandler } from "./providers/gauss"
 import { GeminiHandler } from "./providers/gemini"
 import { GroqHandler } from "./providers/groq"
 import { HicapHandler } from "./providers/hicap"
@@ -431,6 +432,16 @@ function createHandlerForProvider(
 				onRetryAttempt: options.onRetryAttempt,
 				nousResearchApiKey: options.nousResearchApiKey,
 				apiModelId: mode === "plan" ? options.planModeNousResearchModelId : options.actModeNousResearchModelId,
+			})
+		case "gauss":
+			return new GaussHandler({
+				onRetryAttempt: options.onRetryAttempt,
+				gaussApiKey: options.gaussApiKey,
+				gaussClientKey: options.gaussClientKey,
+				gaussBaseUrl: options.gaussBaseUrl,
+				gaussModelId: mode === "plan" ? options.planModeGaussModelId : options.actModeGaussModelId,
+				gaussModelInfo: mode === "plan" ? options.planModeGaussModelInfo : options.actModeGaussModelInfo,
+				reasoningEffort: mode === "plan" ? options.planModeReasoningEffort : options.actModeReasoningEffort,
 			})
 		default:
 			return new AnthropicHandler({
